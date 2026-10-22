@@ -99,10 +99,77 @@ html.classList.add('js');
   }, { passive: true });
 })();
 
+/* ── Steppers ([data-steps="<default index>"]) ──
+   Desktop: the active item follows the pointer (and keyboard focus).
+   Mobile: the list pins below the nav and slides sideways one item per ~55vh of scroll,
+   then releases and the page continues. Wrapped as .pin > .pin-stick > list + dots. */
+(function () {
+  const mobile = matchMedia('(max-width: 859px)');
+  const pins = [...document.querySelectorAll('[data-steps]')].map(list => {
+    const items = [...list.children];
+    const pin = document.createElement('div');
+    const stick = document.createElement('div');
+    const dots = document.createElement('div');
+    pin.className = 'pin';
+    stick.className = 'pin-stick';
+    dots.className = 'pin-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    items.forEach(() => dots.append(document.createElement('i')));
+    // the section heading pins with the list, so each pinned frame reads as a full slide
+    const head = list.parentElement.querySelector(':scope > .sec-head');
+    list.before(pin);
+    pin.append(stick);
+    stick.append(...(head ? [head] : []), list, dots);
+
+    const setActive = i => {
+      items.forEach((el, j) => el.classList.toggle('is-active', j === i));
+      [...dots.children].forEach((d, j) => d.classList.toggle('on', j === i));
+    };
+    setActive(Number(list.dataset.steps) || 0);
+    items.forEach((el, i) => {
+      el.addEventListener('pointerenter', () => { if (!mobile.matches) setActive(i); });
+      el.addEventListener('focusin', () => setActive(i));
+    });
+    return { pin, stick, list, items, setActive };
+  });
+  if (!pins.length) return;
+
+  const layout = () => pins.forEach(p => {
+    const on = mobile.matches && !calm;
+    p.pin.classList.toggle('is-pinned', on);
+    p.list.style.transform = '';
+    p.pin.style.height = on ? `${p.stick.offsetHeight + (p.items.length - 1) * innerHeight * 0.55}px` : '';
+  });
+  let queued = false;
+  const scroll = () => {
+    queued = false;
+    pins.forEach(p => {
+      if (!p.pin.classList.contains('is-pinned')) return;
+      const stickTop = parseFloat(getComputedStyle(p.stick).top) || 0;
+      const range = p.pin.offsetHeight - p.stick.offsetHeight;
+      const prog = Math.min(1, Math.max(0, (stickTop - p.pin.getBoundingClientRect().top) / range));
+      // snap: each step slides exactly one card into place (CSS eases the move)
+      const i = Math.round(prog * (p.items.length - 1));
+      const max = p.list.scrollWidth - p.stick.clientWidth;
+      p.list.style.transform = `translate3d(${-Math.min(p.items[i].offsetLeft, max)}px, 0, 0)`;
+      p.setActive(i);
+    });
+  };
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(scroll); } };
+  layout();
+  scroll();
+  // heights change once web fonts and images arrive
+  document.fonts?.ready.then(() => { layout(); queue(); });
+  addEventListener('load', () => { layout(); queue(); });
+  addEventListener('scroll', queue, { passive: true });
+  addEventListener('resize', () => { layout(); queue(); });
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => { layout(); queue(); }));
+})();
+
 /* ── 3D scroll reveal: tag groups, stagger siblings with --i ── */
 (function () {
-  const groups = ['.sec-head', '.path', '.rows > .row', '.proof', '.ways', '.know', '.quiz', '.process', '.faq', '.contact-grid', '.final .wrap'];
-  const children = { '.path': '.step', '.proof': '.case', '.ways': '.way', '.know': ':scope > div', '.process': 'li', '.faq': 'details', '.contact-grid': ':scope > *', '.final .wrap': ':scope > *', '.sec-head': ':scope > *', '.quiz': ':scope > *' };
+  const groups = ['.sec-head', '.pin-stick', '.rows > .row', '.proof', '.know', '.quiz', '.faq', '.contact-grid', '.final .wrap'];
+  const children = { '.proof': '.case', '.know': ':scope > div', '.faq': 'details', '.contact-grid': ':scope > *', '.final .wrap': ':scope > *', '.sec-head': ':scope > *', '.quiz': ':scope > *' };
   const targets = [];
   groups.forEach(sel => document.querySelectorAll(sel).forEach(g => {
     const kids = children[sel] ? [...g.querySelectorAll(children[sel])] : [g];
@@ -203,8 +270,22 @@ html.classList.add('js');
     syncContactLinks();
   }
 
-  quiz.addEventListener('change', e => {
-    state[e.target.name] = e.target.value;
+  // Rule: answer 1 unlocks 2, answer 2 unlocks 3. Clicking the selected answer
+  // deselects it and clears + re-locks every question after it.
+  // `click` (not `change`) because re-clicking a checked radio fires no change.
+  quiz.addEventListener('click', e => {
+    const input = e.target.closest('input[type="radio"]');
+    if (!input) return;
+    const k = input.name;
+    if (state[k] === input.value) {
+      const order = steps.map(s => s.dataset.key);
+      order.slice(order.indexOf(k)).forEach(key => {
+        delete state[key];
+        quiz.querySelectorAll(`input[name="${key}"]`).forEach(i => { i.checked = false; });
+      });
+    } else {
+      state[k] = input.value;
+    }
     render();
     const next = steps.find(s => !s.hidden && !state[s.dataset.key]);
     if (next && matchMedia('(max-width: 859px)').matches) next.scrollIntoView({ block: 'center', behavior: 'smooth' });
