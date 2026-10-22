@@ -25,3 +25,4 @@ Belt black + gi white, one accent (IBJJF belt-bar red). The nav is the belt: 4 t
 - [x] Quiz: stronger buttons (radio dot), fixed double-border bug (`.opt span` matched inner language spans), progressive rule: Q1 unlocks Q2 unlocks Q3; re-click deselects and clears/locks later questions
 - [x] Steppers (path, ways, process): desktop selection follows the mouse; mobile pins heading + list and snaps card by card, then releases
 - [x] Mobile audit: every link/button inside the viewport, tap targets ≥ 24px (logo, footer, text links enlarged), menu works at 390 and 360
+- [x] Hero umlauts (GRÜNDER) no longer clipped by the line reveal; double-tap zoom disabled on iOS (pinch zoom still works)
