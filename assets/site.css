@@ -38,7 +38,7 @@ html[lang="en"] [data-l="de"] { display: none !important; }
 
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--nav-h) + 16px); }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; touch-action: manipulation; scroll-padding-top: calc(var(--nav-h) + 16px); }
 body {
   font-family: var(--ff-b); font-size: 17px; line-height: 1.6;
   background: var(--black); color: var(--gi);
@@ -167,7 +167,8 @@ ul, ol { list-style: none; }
 @keyframes stamp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 /* Headline lines rise in behind the band */
-.rise > span { display: block; overflow: hidden; }
+.h1.rise { line-height: 1.02; }
+.rise > span { display: block; overflow: hidden; padding-top: .16em; margin-top: -.16em; } /* headroom so Ü/Ä/Ö dots aren't clipped */
 .rise > span > span { display: block; animation: rise .8s var(--ease-out) both; }
 .rise > span:nth-child(2) > span { animation-delay: .1s; }
 .rise > span:nth-child(3) > span { animation-delay: .2s; }
